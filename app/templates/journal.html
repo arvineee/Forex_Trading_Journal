@@ -1,0 +1,228 @@
+{% extends "base.html" %}
+
+{% block content %}
+<header class="flex justify-between items-center py-4 border-b border-slate-800">
+    <div>
+        <h1 class="text-2xl font-black text-white tracking-tight">Trading Logbook</h1>
+        <p class="text-slate-400 text-xs">Record your live and historical performance metrics</p>
+    </div>
+</header>
+
+<div class="grid grid-cols-1 xl:grid-cols-3 gap-6 mt-6">
+    <!-- AJAX Submission Form Engine Panel -->
+    <div class="xl:col-span-1 bg-darkCard border border-slate-800 p-6 rounded-2xl shadow-xl h-fit">
+        <h3 class="text-sm font-bold text-emerald-400 uppercase tracking-wider mb-4 flex items-center gap-2"><i class="fa-solid fa-plus-circle"></i> Log Position</h3>
+        <form id="tradeForm" class="space-y-4">
+            <input type="hidden" id="csrf_token" name="csrf_token" value="{{ csrf_token() }}">
+            
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-[10px] font-bold uppercase text-slate-400 mb-1">Date</label>
+                    <input type="date" name="date" required value="{{ current_user.created_at.strftime('%Y-%m-%d') }}" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-xs">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold uppercase text-slate-400 mb-1">Time</label>
+                    <input type="time" name="time" required value="08:00" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-xs">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-[10px] font-bold uppercase text-slate-400 mb-1">Asset Class</label>
+                    <select name="asset_class" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-xs">
+                        <option value="Forex">Forex</option>
+                        <option value="Gold">Gold</option>
+                        <option value="Indices">Indices</option>
+                        <option value="Crypto">Crypto</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold uppercase text-slate-400 mb-1">Ticker / Pair</label>
+                    <input type="text" name="pair" placeholder="EURUSD" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-xs uppercase">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-[10px] font-bold uppercase text-slate-400 mb-1">Session</label>
+                    <select name="session" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-xs">
+                        <option value="London">London</option>
+                        <option value="New York">New York</option>
+                        <option value="Asian">Asian</option>
+                        <option value="Sydney">Sydney</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold uppercase text-slate-400 mb-1">Direction</label>
+                    <select name="direction" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-xs">
+                        <option value="Buy">Buy</option>
+                        <option value="Sell">Sell</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-3 gap-2">
+                <div>
+                    <label class="block text-[10px] font-bold uppercase text-slate-400 mb-1">Entry</label>
+                    <input type="number" step="any" id="entry_price" name="entry_price" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-2 py-2 text-white text-xs">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold uppercase text-slate-400 mb-1">SL</label>
+                    <input type="number" step="any" id="stop_loss" name="stop_loss" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-2 py-2 text-white text-xs">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold uppercase text-slate-400 mb-1">TP</label>
+                    <input type="number" step="any" id="take_profit" name="take_profit" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-2 py-2 text-white text-xs">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-3 gap-2">
+                <div>
+                    <label class="block text-[10px] font-bold uppercase text-slate-400 mb-1">Lot Size</label>
+                    <input type="number" step="any" name="lot_size" required value="0.1" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-2 py-2 text-white text-xs">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold uppercase text-slate-400 mb-1">Exit Price</label>
+                    <input type="number" step="any" id="exit_price" name="exit_price" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-2 py-2 text-white text-xs">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold uppercase text-slate-400 mb-1">Risk %</label>
+                    <input type="number" step="any" name="risk_percentage" value="1.0" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-2 py-2 text-white text-xs">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3 border-t border-slate-800 pt-3">
+                <div>
+                    <label class="block text-[10px] font-bold uppercase text-slate-400 mb-1">Balance Before</label>
+                    <input type="number" step="any" id="balance_before" name="balance_before" value="{{ account.current_balance if account else 250.0 }}" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-xs font-mono">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold uppercase text-slate-400 mb-1">Balance After</label>
+                    <input type="number" step="any" id="balance_after" name="balance_after" placeholder="Computed Auto" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-xs font-mono">
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-[10px] font-bold uppercase text-slate-400 mb-1">Psychology Red Flags</label>
+                <div class="grid grid-cols-3 gap-2 mt-1">
+                    <label class="flex items-center gap-1.5 text-[11px] text-slate-300"><input type="checkbox" name="flags" value="FOMO" class="rounded accent-emerald-500"> FOMO</label>
+                    <label class="flex items-center gap-1.5 text-[11px] text-slate-300"><input type="checkbox" name="flags" value="Revenge" class="rounded accent-emerald-500"> Revenge</label>
+                    <label class="flex items-center gap-1.5 text-[11px] text-slate-300"><input type="checkbox" name="flags" value="Overtrading" class="rounded accent-emerald-500"> Overtrade</label>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-[10px] font-bold uppercase text-slate-400 mb-1">Review Notes</label>
+                <textarea name="notes" rows="2" placeholder="Market behavior structural shifts observed..." class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-xs"></textarea>
+            </div>
+
+            <button type="submit" class="w-full bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-black py-2.5 px-4 rounded-xl transition text-xs uppercase tracking-wider">Commit Log Entry</button>
+        </form>
+    </div>
+
+    <!-- Active Structural Records Matrix Dashboard System Display -->
+    <div class="xl:col-span-2 space-y-4">
+        <div class="bg-darkCard border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+            <div class="p-4 bg-slate-900/40 border-b border-slate-800">
+                <h3 class="font-bold text-slate-300 uppercase tracking-wider text-xs">Historical Transaction Ledger</h3>
+            </div>
+            <div class="divide-y divide-slate-800" id="ledgerContainer">
+                {% for trade in trades %}
+                <div class="p-4 hover:bg-slate-800/20 transition flex flex-col sm:flex-row justify-between gap-4 items-start sm:items-center text-xs group">
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="font-black text-sm text-white">{{ trade.pair }}</span>
+                            <span class="px-2 py-0.5 rounded font-bold text-[9px] {% if trade.direction == 'Buy' %}bg-emerald-950 text-emerald-400{% else %}bg-rose-950 text-rose-400{% endif %}">{{ trade.direction }}</span>
+                            <span class="text-[10px] text-slate-500 font-mono">{{ trade.date }}</span>
+                        </div>
+                        <div class="text-slate-400 mt-1">
+                            Execution range: <span class="text-slate-200 font-mono">{{ trade.entry_price }} &rarr; {{ trade.exit_price }}</span> | Lots: <span class="text-slate-200 font-mono">{{ trade.lot_size }}</span>
+                        </div>
+                        {% if trade.flags %}
+                        <div class="flex gap-1 mt-1.5">
+                            {% for flag in trade.flags.split(',') %}
+                            <span class="bg-rose-950/40 border border-rose-900 text-rose-400 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-tight">{{ flag }}</span>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="flex items-center gap-4 w-full sm:w-auto border-t sm:border-t-0 pt-2 sm:pt-0 border-slate-800 justify-between sm:justify-end">
+                        <div class="text-left sm:text-right flex sm:flex-col justify-between sm:justify-center">
+                            <span class="text-[10px] text-slate-500 sm:block hidden">Net Yield Impact</span>
+                            <div class="font-mono font-black text-sm {% if trade.net_pnl >= 0 %}text-emerald-400{% else %}text-rose-400{% endif %}">
+                                ${{ "%.2f"|format(trade.net_pnl) }}
+                            </div>
+                            <span class="text-[10px] font-mono block text-slate-400">({{ "%.1f"|format(trade.pip_gain_loss) }} pips)</span>
+                        </div>
+                        <!-- Delete Trade Button -->
+                        <button onclick="deleteTrade({{ trade.id }})" class="p-2 text-slate-500 hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition" title="Delete entry">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+                {% else %}
+                <div class="p-8 text-center text-slate-500">No transactions recorded in the ledger database architecture.</div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const form = document.getElementById('tradeForm');
+        
+        // Handle Form Submission via AJAX/Fetch API safely 
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const formData = new FormData(form);
+            
+            fetch("{{ url_for('journal.log_book') }}", {
+                method: "POST",
+                body: formData,
+                headers: { "X-Requested-With": "XMLHttpRequest" }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(data.status === 'success') {
+                    window.location.reload(); // Live reload matching desktop view configurations sync
+                } else {
+                    alert("Execution Error: " + data.message);
+                }
+            })
+            .catch(err => console.error(err));
+        });
+    });
+
+    // Delete Trade Logic function attached globally
+    function deleteTrade(tradeId) {
+        if (!confirm('Are you sure you want to delete this historical trade? This will recalculate your account balance.')) {
+            return;
+        }
+
+        const csrfToken = document.getElementById('csrf_token').value;
+
+        fetch(`/delete_trade/${tradeId}`, {
+            method: 'DELETE',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': csrfToken
+            }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if(data.status === 'success') {
+                window.location.reload(); // Quick refresh to update ledger and balances
+            } else {
+                alert("Failed to delete: " + data.message);
+            }
+        })
+        .catch(err => {
+            console.error("Deletion error:", err);
+            alert("A network error occurred while deleting the trade.");
+        });
+    }
+</script>
+{% endblock %}

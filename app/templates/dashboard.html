@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+
+{% block content %}
+<header class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 py-4 border-b border-slate-800">
+    <div>
+        <h1 class="text-2xl font-black text-white tracking-tight">Analytics Dashboard</h1>
+        <p class="text-slate-400 text-xs">Portfolio Account Status: <span class="text-emerald-400 font-bold">{{ account.broker if account else 'Primary Engine' }}</span></p>
+    </div>
+    <div class="bg-slate-900 border border-slate-800 p-3 rounded-xl flex items-center gap-4 shadow-inner">
+        <div>
+            <div class="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Account Balance</div>
+            <div class="text-xl font-black text-emerald-400">${{ "%.2f"|format(account.current_balance if account else 250.0) }}</div>
+        </div>
+    </div>
+</header>
+
+<section class="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
+    <div class="bg-darkCard border border-slate-800/80 p-4 rounded-2xl shadow-sm">
+        <div class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Total Logs</div>
+        <div class="text-3xl font-black text-white tracking-tight">{{ total_trades }}</div>
+    </div>
+    <div class="bg-darkCard border border-slate-800/80 p-4 rounded-2xl shadow-sm">
+        <div class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Win Frequency</div>
+        <div class="text-3xl font-black text-emerald-400 tracking-tight">{{ win_rate }}%</div>
+    </div>
+    <div class="bg-darkCard border border-slate-800/80 p-4 rounded-2xl shadow-sm">
+        <div class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Net Flow</div>
+        <div class="text-3xl font-black tracking-tight {% if net_pnl >= 0 %}text-emerald-400{% else %}text-rose-400{% endif %}">
+            ${{ "%.2f"|format(net_pnl) }}
+        </div>
+    </div>
+    <div class="bg-darkCard border border-slate-800/80 p-4 rounded-2xl shadow-sm">
+        <div class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Profit Factor</div>
+        <div class="text-3xl font-black text-purple-400 tracking-tight">{{ profit_factor }}</div>
+    </div>
+</section>
+
+<section class="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
+    <div class="lg:col-span-2 bg-darkCard border border-slate-800 p-4 rounded-2xl">
+        <h3 class="text-sm font-bold text-slate-300 mb-4 uppercase tracking-wider text-xs">Equity Curve Growth Tracker</h3>
+        <div class="h-64"><canvas id="equityCurveChart"></canvas></div>
+    </div>
+    <div class="bg-darkCard border border-slate-800 p-4 rounded-2xl">
+        <h3 class="text-sm font-bold text-slate-300 mb-4 uppercase tracking-wider text-xs">Distribution Ratio</h3>
+        <div class="h-64 flex items-center justify-center"><canvas id="outcomePieChart"></canvas></div>
+    </div>
+</section>
+
+<section class="mt-6 bg-darkCard border border-slate-800 rounded-2xl overflow-hidden">
+    <div class="p-4 border-b border-slate-800 flex justify-between items-center">
+        <h3 class="font-bold text-slate-300 uppercase tracking-wider text-xs">Recent Ledger Injections</h3>
+        <a href="{{ url_for('journal.log_book') }}" class="text-xs text-emerald-400 hover:underline">Full Logbook &rarr;</a>
+    </div>
+    <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+            <thead>
+                <tr class="bg-slate-900/60 border-b border-slate-800 text-[11px] text-slate-400 font-bold uppercase tracking-wider">
+                    <th class="p-4">Timestamp</th>
+                    <th class="p-4">Asset Pair</th>
+                    <th class="p-4">Type</th>
+                    <th class="p-4">Entry / Exit</th>
+                    <th class="p-4">Pips Gain/Loss</th>
+                    <th class="p-4">Net P&amp;L</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-800/60">
+                {% for trade in trades %}
+                <tr class="hover:bg-slate-800/30 transition text-xs">
+                    <td class="p-4 text-slate-400 font-mono">{{ trade.date }} {{ trade.time.strftime('%H:%M') }}</td>
+                    <td class="p-4 font-black text-white">{{ trade.pair }} <span class="text-[10px] bg-slate-800 px-2 py-0.5 rounded text-slate-400 font-normal">{{ trade.session }}</span></td>
+                    <td class="p-4"><span class="px-2 py-0.5 rounded font-bold text-[10px] {% if trade.direction == 'Buy' %}bg-emerald-950 text-emerald-400{% else %}bg-rose-950 text-rose-400{% endif %}">{{ trade.direction }}</span></td>
+                    <td class="p-4 font-mono text-slate-300">{{ trade.entry_price }} / {{ trade.exit_price }}</td>
+                    <td class="p-4 font-mono font-bold {% if trade.pip_gain_loss >= 0 %}text-emerald-400{% else %}text-rose-400{% endif %}">{{ "%.1f"|format(trade.pip_gain_loss) }}</td>
+                    <td class="p-4 font-mono font-bold {% if trade.net_pnl >= 0 %}text-emerald-400{% else %}text-rose-400{% endif %}">${{ "%.2f"|format(trade.net_pnl) }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="6" class="p-8 text-center text-slate-500">No trading system data found. Execute manual entries in the Log Book.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        fetch('/api/chart-data')
+            .then(res => res.json())
+            .then(data => {
+                // Equity Curve Linear Initialization
+                new Chart(document.getElementById('equityCurveChart'), {
+                    type: 'line',
+                    data: {
+                        labels: data.equity_curve.labels,
+                        datasets: [{
+                            label: 'Balance Evolution ($)',
+                            data: data.equity_curve.data,
+                            borderColor: '#34d399',
+                            backgroundColor: 'rgba(52, 211, 153, 0.05)',
+                            tension: 0.2,
+                            fill: true,
+                            borderWidth: 3
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+                });
+
+                // Distribution Framework Pie Mapping
+                new Chart(document.getElementById('outcomePieChart'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: data.outcomes.labels,
+                        datasets: [{
+                            data: data.outcomes.data,
+                            backgroundColor: ['#10b981', '#f43f5e', '#64748b'],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false }
+                });
+            });
+    });
+</script>
+{% endblock %}
+

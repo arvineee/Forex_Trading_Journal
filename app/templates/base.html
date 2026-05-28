@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-900 text-slate-100">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FX Journal - Pro Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: { extend: { colors: { darkDark: '#0b0f19', darkCard: '#151f32' } } }
+        }
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="h-full flex flex-col md:flex-row bg-darkDark overflow-hidden text-sm">
+
+    <aside class="hidden md:flex flex-col w-64 bg-darkCard border-r border-slate-800 p-4 shrink-0">
+        <div class="flex items-center gap-3 mb-8 px-2">
+            <div class="bg-emerald-500 text-slate-900 p-2 rounded-lg font-bold"><i class="fa-solid fa-chart-line text-lg"></i></div>
+            <span class="text-xl font-black tracking-wider text-emerald-400">FX JOURNAL</span>
+        </div>
+        <nav class="flex-1 space-y-1">
+            <a href="{{ url_for('journal.dashboard') }}" class="flex items-center gap-3 px-4 py-3 rounded-xl transition text-slate-300 hover:bg-slate-800 hover:text-white"><i class="fa-solid fa-gauge-high"></i> Dashboard</a>
+            <a href="{{ url_for('journal.log_book') }}" class="flex items-center gap-3 px-4 py-3 rounded-xl transition text-slate-300 hover:bg-slate-800 hover:text-white"><i class="fa-solid fa-book-open"></i> Log Book</a>
+            <a href="{{ url_for('analytics.stats_center') }}" class="flex items-center gap-3 px-4 py-3 rounded-xl transition text-slate-300 hover:bg-slate-800 hover:text-white"><i class="fa-solid fa-pie-chart"></i> Analytics</a>
+        </nav>
+        {% if current_user.is_authenticated %}
+        <div class="pt-4 border-t border-slate-800">
+            <a href="{{ url_for('auth.logout') }}" class="flex items-center gap-3 px-4 py-3 rounded-xl text-rose-400 hover:bg-rose-950/30 transition"><i class="fa-solid fa-right-from-bracket"></i> Sign Out</a>
+        </div>
+        {% endif %}
+    </aside>
+
+    <main class="flex-1 flex flex-col min-w-0 h-full overflow-y-auto pb-20 md:pb-0">
+        <div class="p-4 max-w-7xl w-full mx-auto space-y-4">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="p-4 rounded-xl border {% if category == 'success' %} bg-emerald-950/40 border-emerald-800 text-emerald-400 {% else %} bg-rose-950/40 border-rose-800 text-rose-400 {% endif %} flex justify-between items-center">
+                            <span>{{ message }}</span>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+            
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+
+    <nav class="md:hidden fixed bottom-0 left-0 right-0 bg-darkCard/95 backdrop-blur border-t border-slate-800 flex justify-around py-2 z-50">
+        <a href="{{ url_for('journal.dashboard') }}" class="flex flex-col items-center gap-1 p-2 text-slate-400 hover:text-emerald-400"><i class="fa-solid fa-gauge-high text-lg"></i><span class="text-[10px]">Home</span></a>
+        <a href="{{ url_for('journal.log_book') }}" class="flex flex-col items-center gap-1 p-2 text-slate-400 hover:text-emerald-400"><i class="fa-solid fa-book-open text-lg"></i><span class="text-[10px]">Journal</span></a>
+        <a href="{{ url_for('analytics.stats_center') }}" class="flex flex-col items-center gap-1 p-2 text-slate-400 hover:text-emerald-400"><i class="fa-solid fa-pie-chart text-lg"></i><span class="text-[10px]">Stats</span></a>
+        {% if current_user.is_authenticated %}
+        <a href="{{ url_for('auth.logout') }}" class="flex flex-col items-center gap-1 p-2 text-rose-400"><i class="fa-solid fa-right-from-bracket text-lg"></i><span class="text-[10px]">Exit</span></a>
+        {% endif %}
+    </nav>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>
+
